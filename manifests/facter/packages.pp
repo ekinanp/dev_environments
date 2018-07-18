@@ -1,4 +1,4 @@
-class facter::packages(
+class dev_environments::facter::packages(
   String $branch
 ) {
   # Install the EPEL-release RPM (needed to install yaml-cpp)

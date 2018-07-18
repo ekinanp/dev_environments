@@ -1,0 +1,57 @@
+require 'json'
+require 'net/http'
+
+fqdn = "<%= scope['::fqdn'] %>"
+ssh_public_key_file = "<%= @ssh_public_key_file %>"
+
+unless ENV['GITHUB_API_TOKEN']
+  raise "Cannot set the SSH key in GitHub! You must have the GITHUB_API_TOKEN environment variable set!"
+end
+@github_api_token = ENV['GITHUB_API_TOKEN']
+
+@headers = {
+  'Authorization' => "token #{@github_api_token}",
+  'Accept'        => 'application/json'
+}
+def make_request(endpoint, method, req_body = nil)
+  req_class = Object.const_get "Net::HTTP::#{method.capitalize}"
+
+  url = "https://api.github.com"
+  uri = URI.parse("#{url}/#{endpoint}")
+
+  @http = Net::HTTP.new(uri.host, uri.port)
+  @http.use_ssl = true
+
+  @request = req_class.new(uri.request_uri)
+  @request.body = req_body.to_json if req_body
+  @headers.each do |key, value|
+    @request[key] = value
+  end
+
+  @http.request(@request)
+end
+
+# Check to see if the GitHub key is already set
+response = make_request('user/keys', :get)
+unless response.is_a?(Net::HTTPOK)
+  raise "Failed to check the available SSH keys!\nStatus: #{response.class}\nReason: #{response.read_body}"
+end
+keys = JSON.parse(response.read_body)
+keys.each do |key|
+  next unless key['title'] == fqdn
+  puts("We already have an SSH key setup for #{fqdn}. Nothing more to do ...")
+  exit 0
+end
+
+# Set-up the SSH key
+puts("Setting up the SSH key for #{fqdn} ...")
+req_body = {
+  "title": fqdn,
+  "key": File.read(ssh_public_key_file)
+}
+response = make_request('user/keys', :post, req_body)
+unless response.is_a?(Net::HTTPCreated)
+  raise "Something went wrong with creating the SSH key for #{fqdn}!\nStatus: #{response.class}\nReason: #{response.read_body}"
+end
+
+puts("Successfully set-up the GitHub SSH key for #{fqdn}!")

@@ -1,4 +1,4 @@
-class facter(
+class dev_environments::facter(
   String $branch,
   String $dir = '/root'
 ) {
