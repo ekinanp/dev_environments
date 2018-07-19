@@ -46,8 +46,6 @@ class dev_environments::git(
     require => Exec[$ssh_agent_cmd],
   }
 
-  # TODO: Now add this ssh key to your GitHub. Set the GITHUB_API_TOKEN as an env. variable on the machines.
-  # This should probably be a simple API call.
   $ruby = "/opt/puppetlabs/puppet/bin/ruby"
   $script_path = "/tmp/set_github_ssh_key.rb"
   file { "${script_path}":
